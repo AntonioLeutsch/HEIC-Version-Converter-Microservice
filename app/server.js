@@ -1,9 +1,19 @@
 import "dotenv/config";
+import * as Sentry from "@sentry/node";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import convertAll from "heic-convert";
+
+// Sentry Init
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || "development",
+    tracesSampleRate: 1.0,
+  });
+}
 
 const app = new Hono();
 
@@ -12,7 +22,7 @@ app.use("*", logger());
 app.use(
   "*",
   cors({
-    exposeHeaders: ["Content-Disposition"], // ← CORS Fix
+    exposeHeaders: ["Content-Disposition"],
   }),
 );
 
@@ -106,6 +116,7 @@ app.post("/convert", bearerAuth, async (c) => {
     return c.body(outputBuffer, 200, headers);
   } catch (error) {
     console.error("Conversion Error:", error);
+    Sentry.captureException(error);
 
     const msg = error instanceof Error ? error.message : String(error);
     if (msg.includes("not supported") || msg.includes("HEIC")) {
@@ -129,6 +140,7 @@ app.notFound((c) =>
 
 app.onError((err, c) => {
   console.error("Unhandled Error:", err);
+  Sentry.captureException(err);
   return c.json({ success: false, error: "Interner Server-Fehler" }, 500);
 });
 

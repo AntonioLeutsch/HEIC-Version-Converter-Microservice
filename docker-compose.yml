@@ -8,6 +8,7 @@ services:
       - PORT=3000
       - NODE_ENV=production
       - VALID_TOKENS=${VALID_TOKENS}
+      - SENTRY_DSN=${SENTRY_DSN:-}
     restart: unless-stopped
     healthcheck:
       test:
